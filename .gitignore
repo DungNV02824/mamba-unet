@@ -1,0 +1,61 @@
+# ======================
+# Python
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Virtual environment
+.venv/
+venv/
+mamba_env/
+
+# ======================
+# Dataset & large files
+# ======================
+data/
+datasets/
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+*.h5
+*.pth
+*.pt
+*.ckpt
+*.npz
+
+# ======================
+# Model checkpoints / outputs
+# ======================
+checkpoints/
+outputs/
+results/
+runs/
+
+# ======================
+# Images (large)
+# ======================
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tif
+*.tiff
+
+# (Nếu muốn giữ ảnh test nhỏ thì comment 3 dòng trên)
+
+# ======================
+# VS Code
+# ======================
+.vscode/
+
+# ======================
+# OS
+# ======================
+.DS_Store
+Thumbs.db
+desktop.ini
