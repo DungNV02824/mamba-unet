@@ -16,7 +16,7 @@ mamba_env/
 # Dataset & large files
 # ======================
 data/
-datasets/
+# datasets/
 *.zip
 *.rar
 *.7z
