@@ -1,5 +1,8 @@
 """
-Dataset loader cho ảnh răng panoramic
+OPTIMIZED Dataset loader cho ảnh răng panoramic
+- Augmentation mạnh hơn
+- CLAHE preprocessing
+- Better normalization
 """
 import os
 import numpy as np
@@ -8,6 +11,7 @@ import torch
 from torch.utils.data import Dataset
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+import cv2
 
 class ToothDataset(Dataset):
     def __init__(self, root_dir, split='train', img_size=512, augment=True):
@@ -21,6 +25,11 @@ class ToothDataset(Dataset):
         all_images = sorted([f for f in os.listdir(self.img_dir) 
                            if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
         
+        # SHUFFLE trước khi chia để tránh bias
+        import random
+        random.seed(42)
+        random.shuffle(all_images)
+        
         # Chia train/val (80/20)
         n_total = len(all_images)
         n_train = int(0.8 * n_total)
@@ -30,20 +39,47 @@ class ToothDataset(Dataset):
         else:
             self.image_list = all_images[n_train:]
         
-        # Augmentation
+        # AUGMENTATION MẠNH HƠN
         if augment and split == 'train':
             self.transform = A.Compose([
                 A.Resize(img_size, img_size),
+                
+                # Geometric
                 A.HorizontalFlip(p=0.5),
-                A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.3),
-                A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, p=0.5),
-                A.GaussNoise(p=0.2),
+                A.ShiftScaleRotate(
+                    shift_limit=0.1, 
+                    scale_limit=0.15, 
+                    rotate_limit=20, 
+                    border_mode=cv2.BORDER_CONSTANT,
+                    p=0.6
+                ),
+                A.ElasticTransform(
+                    alpha=1, 
+                    sigma=50, 
+                    alpha_affine=50, 
+                    p=0.3
+                ),
+                
+                # Intensity
+                A.RandomBrightnessContrast(
+                    brightness_limit=0.25, 
+                    contrast_limit=0.25, 
+                    p=0.5
+                ),
+                A.RandomGamma(gamma_limit=(80, 120), p=0.3),
+                A.GaussNoise(var_limit=(10.0, 50.0), p=0.3),
+                A.GaussianBlur(blur_limit=(3, 5), p=0.2),
+                
+                # CLAHE - Cải thiện contrast cho X-ray
+                A.CLAHE(clip_limit=2.0, tile_grid_size=(8, 8), p=0.5),
+                
                 A.Normalize(mean=[0.5], std=[0.5]),
                 ToTensorV2()
             ])
         else:
             self.transform = A.Compose([
                 A.Resize(img_size, img_size),
+                A.CLAHE(clip_limit=2.0, tile_grid_size=(8, 8), p=1.0),  # Luôn dùng cho val
                 A.Normalize(mean=[0.5], std=[0.5]),
                 ToTensorV2()
             ])
@@ -65,7 +101,7 @@ class ToothDataset(Dataset):
         mask = np.array(Image.open(mask_path).convert('L'))
         
         # Binarize mask
-        mask = (mask > 0).astype(np.uint8)
+        mask = (mask > 127).astype(np.uint8)  # Threshold = 127 cho chắc chắn
         
         # Transform
         transformed = self.transform(image=image, mask=mask)

@@ -4,9 +4,8 @@ import cv2
 import torch
 import numpy as np
 
-# ============================================================
-# MOCK MAMBA (nếu máy chưa cài mamba_ssm)
-# ============================================================
+
+# MOCK MAMBA 
 class MockMamba:
     def __init__(self, d_model, d_state=16, d_conv=3, expand=2):
         self.d_model = d_model
@@ -22,21 +21,16 @@ except ImportError:
         'MockModule', (), {'Mamba': MockMamba}
     )()
 
-# ============================================================
 # IMPORT MODEL
-# ============================================================
 from models.mamba_unet import create_mamba_unet
 
-
-# ============================================================
 # CONFIG
-# ============================================================
 IMG_SIZE = 512
 NUM_CLASSES = 2
 IN_CHANS = 1
 
-CHECKPOINT_PATH = "/mnt/c/project/Mamba/checkpoints/20260206_213948/best.pth"
-TEST_IMAGE_PATH = "./600.png"
+CHECKPOINT_PATH = "/mnt/c/project/Mamba/checkpoints/20260206_115401/best.pth"
+TEST_IMAGE_PATH = "./test_image.png"
 
 SAVE_MASK_PATH    = "prediction_mask.png"
 SAVE_OVERLAY_PATH = "prediction_overlay.png"
@@ -44,9 +38,8 @@ SAVE_OVERLAY_PATH = "prediction_overlay.png"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-# ============================================================
 # UTILS
-# ============================================================
+
 def print_shape(name, x):
     if isinstance(x, torch.Tensor):
         print(f"  {name:30s}: {tuple(x.shape)}")
@@ -56,7 +49,7 @@ def print_shape(name, x):
 
 def load_image_gray(path, size=512):
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-    assert img is not None, f"❌ Cannot read image: {path}"
+    assert img is not None, f" Cannot read image: {path}"
     img = cv2.resize(img, (size, size))
     img = img.astype(np.float32) / 255.0
     return img
@@ -73,12 +66,10 @@ def overlay_mask(image_gray, mask):
     return blended
 
 
-# ============================================================
 # 1. ARCHITECTURE TEST
-# ============================================================
 def test_architecture():
     print("\n" + "="*80)
-    print("🧪 TEST ARCHITECTURE")
+    print(" TEST ARCHITECTURE")
     print("="*80)
 
     model = create_mamba_unet(
@@ -92,19 +83,19 @@ def test_architecture():
     batch_size = 2
     x = torch.randn(batch_size, IN_CHANS, IMG_SIZE, IMG_SIZE).to(DEVICE)
 
-    print("\n📥 INPUT")
+    print("\n INPUT")
     print_shape("Input", x)
 
     # Patch partition
     x_pp = model.patch_partition(x)
-    print("\n1️⃣ Patch Partition")
+    print("\n Patch Partition")
     print_shape("After patch partition", x_pp)
 
     expected = (batch_size, 96, 128, 128)
-    assert x_pp.shape == expected, f"❌ PatchPartition expected {expected}, got {x_pp.shape}"
+    assert x_pp.shape == expected, f" PatchPartition expected {expected}, got {x_pp.shape}"
 
     # Encoder
-    print("\n🔽 ENCODER")
+    print("\n ENCODER")
     skip_connections = []
     x_enc = x_pp
 
@@ -117,15 +108,15 @@ def test_architecture():
         print_shape("Down", x_enc if i < 3 else x_skip)
 
     # Bottleneck
-    print("\n🔄 BOTTLENECK")
+    print("\n BOTTLENECK")
     x_bn = model.bottleneck(x_enc)
     print_shape("Bottleneck", x_bn)
 
     expected_bn = (batch_size, 768, 16, 16)
-    assert x_bn.shape == expected_bn, f"❌ Bottleneck expected {expected_bn}, got {x_bn.shape}"
+    assert x_bn.shape == expected_bn, f" Bottleneck expected {expected_bn}, got {x_bn.shape}"
 
     # Decoder
-    print("\n🔼 DECODER")
+    print("\n DECODER")
     x_dec = x_bn
     skip_connections = skip_connections[:-1]
 
@@ -139,7 +130,7 @@ def test_architecture():
         print_shape("Output", x_dec)
 
     # Final
-    print("\n📤 OUTPUT")
+    print("\n OUTPUT")
     x_final = model.final_expand(x_dec)
     x_out = model.seg_head(x_final)
 
@@ -147,23 +138,21 @@ def test_architecture():
     print_shape("Seg output", x_out)
 
     expected_out = (batch_size, NUM_CLASSES, IMG_SIZE, IMG_SIZE)
-    assert x_out.shape == expected_out, f"❌ Output expected {expected_out}, got {x_out.shape}"
+    assert x_out.shape == expected_out, f" Output expected {expected_out}, got {x_out.shape}"
 
-    print("\n✅ Architecture test PASSED!")
+    print("\n Architecture test PASSED!")
 
 
-# ============================================================
 # 2. INFERENCE TEST
-# ============================================================
 def test_inference():
     print("\n" + "="*80)
-    print("🔍 TEST INFERENCE")
+    print(" TEST INFERENCE")
     print("="*80)
 
-    assert os.path.exists(CHECKPOINT_PATH), "❌ Checkpoint not found!"
-    assert os.path.exists(TEST_IMAGE_PATH), "❌ Test image not found!"
+    assert os.path.exists(CHECKPOINT_PATH), " Checkpoint not found!"
+    assert os.path.exists(TEST_IMAGE_PATH), " Test image not found!"
 
-    print("🚀 Loading model...")
+    print(" Loading model...")
     model = create_mamba_unet(
         in_chans=IN_CHANS,
         num_classes=NUM_CLASSES,
@@ -180,7 +169,7 @@ def test_inference():
         model.load_state_dict(checkpoint)
 
     model.eval()
-    print("✅ Model loaded!")
+    print(" Model loaded!")
 
     # Load image
     img = load_image_gray(TEST_IMAGE_PATH, IMG_SIZE)
@@ -204,30 +193,28 @@ def test_inference():
     overlay = overlay_mask(img, pred_mask_np)
     cv2.imwrite(SAVE_OVERLAY_PATH, overlay)
 
-    print("\n💾 Saved:")
+    print("\n Saved:")
     print(f"  - Mask    : {SAVE_MASK_PATH}")
     print(f"  - Overlay : {SAVE_OVERLAY_PATH}")
 
     # Sanity check
     unique_values = np.unique(pred_mask_np)
-    print("\n🧪 Mask values:", unique_values)
+    print("\n Mask values:", unique_values)
 
-    assert pred_mask_np.shape == (IMG_SIZE, IMG_SIZE), "❌ Mask shape incorrect"
-    assert len(unique_values) <= 2, "❌ Mask is not binary"
+    assert pred_mask_np.shape == (IMG_SIZE, IMG_SIZE), " Mask shape incorrect"
+    assert len(unique_values) <= 2, " Mask is not binary"
 
-    print("\n✅ Inference test PASSED!")
+    print("\n Inference test PASSED!")
 
 
-# ============================================================
 # MAIN
-# ============================================================
 if __name__ == "__main__":
     try:
         test_architecture()
         test_inference()
-        print("\n🎉 ALL TESTS PASSED SUCCESSFULLY!")
+        print("\n ALL TESTS PASSED SUCCESSFULLY!")
 
     except Exception as e:
-        print("\n❌ TEST FAILED:", e)
+        print("\n TEST FAILED:", e)
         import traceback
         traceback.print_exc()
