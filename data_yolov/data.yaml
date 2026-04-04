@@ -1,0 +1,17 @@
+
+
+
+
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 5
+names: ['Cavity teeth', 'filling tooth', 'implant', 'root canal treatment', 'wisdom teeth']
+
+roboflow:
+  workspace: vandung-id4ix
+  project: dental-label-tool-bmxnl
+  version: 6
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/vandung-id4ix/dental-label-tool-bmxnl/dataset/6

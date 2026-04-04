@@ -29,8 +29,8 @@ IMG_SIZE = 512
 NUM_CLASSES = 2
 IN_CHANS = 1
 
-CHECKPOINT_PATH = "/mnt/c/project/Mamba/checkpoints/20260301_114135/checkpoint_epoch20.pth"
-TEST_IMAGE_PATH = "./600.png"
+CHECKPOINT_PATH = "/mnt/c/project/Mamba/checkpoints/20260301_114135/best.pth"
+TEST_IMAGE_PATH = "./87_jpg.rf.98fcfe53bce9efa6a66792252927d216.jpg"
 
 SAVE_MASK_PATH    = "prediction_mask.png"
 SAVE_OVERLAY_PATH = "prediction_overlay.png"
