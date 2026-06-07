@@ -7,9 +7,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-
+# ============================================================================
 # VERSION 1: BASIC (Your current version - WORKS FINE)
-
+# ============================================================================
 
 class DiceLoss_Basic(nn.Module):
     def __init__(self, smooth=1e-5):

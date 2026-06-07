@@ -28,12 +28,14 @@ from models.mamba_unet import create_mamba_unet
 IMG_SIZE = 512
 NUM_CLASSES = 2
 IN_CHANS = 1
+DEPTHS= [2, 2, 9, 2]
+EMBED_DIM= 96
 
-CHECKPOINT_PATH = "/mnt/c/project/Mamba/checkpoints/20260301_114135/best.pth"
-TEST_IMAGE_PATH = "./87_jpg.rf.98fcfe53bce9efa6a66792252927d216.jpg"
+CHECKPOINT_PATH = "checkpoints/20260422_211037/mambaunet.pth"
+TEST_IMAGE_PATH = "./600.png"
 
-SAVE_MASK_PATH    = "prediction_mask.png"
-SAVE_OVERLAY_PATH = "prediction_overlay.png"
+SAVE_MASK_PATH    = "prediction_mask10.png"
+SAVE_OVERLAY_PATH = "prediction_overlay10.png"
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -75,7 +77,10 @@ def test_architecture():
     model = create_mamba_unet(
         in_chans=IN_CHANS,
         num_classes=NUM_CLASSES,
-        img_size=IMG_SIZE
+        img_size=IMG_SIZE,
+        depths=DEPTHS,           
+        embed_dim=EMBED_DIM,
+        
     ).to(DEVICE)
 
     model.eval()
@@ -91,7 +96,7 @@ def test_architecture():
     print("\n Patch Partition")
     print_shape("After patch partition", x_pp)
 
-    expected = (batch_size, 96, 128, 128)
+    expected = (batch_size, 32, 128, 128)
     assert x_pp.shape == expected, f" PatchPartition expected {expected}, got {x_pp.shape}"
 
     # Encoder
@@ -109,10 +114,12 @@ def test_architecture():
 
     # Bottleneck
     print("\n BOTTLENECK")
-    x_bn = model.bottleneck(x_enc)
+    x_bn = x_enc
+    for blk in model.bottleneck:
+        x_bn = blk(x_bn)
     print_shape("Bottleneck", x_bn)
 
-    expected_bn = (batch_size, 768, 16, 16)
+    expected_bn = (batch_size, EMBED_DIM * 8, 16, 16)
     assert x_bn.shape == expected_bn, f" Bottleneck expected {expected_bn}, got {x_bn.shape}"
 
     # Decoder
@@ -156,7 +163,9 @@ def test_inference():
     model = create_mamba_unet(
         in_chans=IN_CHANS,
         num_classes=NUM_CLASSES,
-        img_size=IMG_SIZE
+        img_size=IMG_SIZE,
+        depths=DEPTHS,
+        embed_dim=EMBED_DIM,
     ).to(DEVICE)
 
     checkpoint = torch.load(CHECKPOINT_PATH, map_location=DEVICE)
@@ -182,7 +191,7 @@ def test_inference():
         logits = model(input_tensor)
         probs  = torch.softmax(logits, dim=1)
         target_prob = probs[:, 1]
-        pred_mask = (target_prob > 0.6).float()
+        pred_mask = (target_prob > 0.5).float()
 
     pred_mask_np = pred_mask.squeeze().cpu().numpy()
 

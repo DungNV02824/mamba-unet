@@ -46,7 +46,6 @@ runs/
 *.tif
 *.tiff
 
-# (Nếu muốn giữ ảnh test nhỏ thì comment 3 dòng trên)
 
 # ======================
 # VS Code
